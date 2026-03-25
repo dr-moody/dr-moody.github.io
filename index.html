@@ -2,11 +2,557 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Run 3D</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050510;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+        #game-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+        }
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(5, 5, 16, 0.85);
+            backdrop-filter: blur(5px);
+            z-index: 10;
+        }
+        h1 {
+            color: #00e5ff;
+            font-size: 4rem;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            text-shadow: 0 0 20px #00e5ff, 0 0 40px #00e5ff;
+            margin: 0 0 10px 0;
+            text-align: center;
+        }
+        p {
+            color: #aaddff;
+            font-size: 1.2rem;
+            margin: 10px 0;
+            text-align: center;
+            max-width: 600px;
+            padding: 0 20px;
+        }
+        .controls-hint {
+            display: flex;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .key-badge {
+            background: rgba(0, 229, 255, 0.1);
+            border: 1px solid #00e5ff;
+            padding: 8px 15px;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+        }
+        button {
+            pointer-events: auto;
+            margin-top: 20px;
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            background: transparent;
+            border: 2px solid #ff00ff;
+            color: #ff00ff;
+            border-radius: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5), inset 0 0 15px rgba(255, 0, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #ff00ff;
+            color: #fff;
+            box-shadow: 0 0 30px #ff00ff, inset 0 0 10px #fff;
+            transform: scale(1.05);
+        }
+        #hud {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            color: #fff;
+            font-size: 2rem;
+            font-weight: 800;
+            text-shadow: 0 0 10px #00e5ff;
+            display: none;
+            z-index: 5;
+        }
+        .touch-areas {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            display: flex;
+            pointer-events: none;
+            z-index: 1;
+        }
+        #mobile-controls {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            display: none; /* Hidden by default */
+            justify-content: space-between;
+            padding: 0 30px;
+            box-sizing: border-box;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .control-group {
+            display: flex;
+            gap: 20px;
+            pointer-events: auto;
+        }
+        .btn-mobile {
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 0, 255, 0.1);
+            border: 2px solid #ff00ff;
+            border-radius: 50%;
+            color: #ff00ff;
+            font-size: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+            -webkit-user-select: none;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.3), inset 0 0 10px rgba(255, 0, 255, 0.2);
+            cursor: pointer;
+        }
+        .btn-mobile:active {
+            background: rgba(255, 0, 255, 0.5);
+            box-shadow: 0 0 25px rgba(255, 0, 255, 0.6);
+        }
+        .btn-jump {
+            width: 100px;
+            border-radius: 35px;
+        }
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            button { font-size: 1.2rem; padding: 12px 30px; }
+            #hud { top: 15px; left: 15px; font-size: 1.5rem; }
+        }
+    </style>
 </head>
 <body>
-    <h1>Hello, World!</h1>
-    <p>Welcome to my website.</p>
+    <div id="game-container"></div>
+    
+    <div id="ui">
+        <div id="start-screen" class="screen">
+            <h1>Neon Run</h1>
+            <p>Navigate the endless void. Dodge the gaps and survive as long as you can!</p>
+            <div class="controls-hint">
+                <span class="key-badge">Left/Right Arrows (or A/D) to Move</span>
+                <span class="key-badge">Spacebar to Jump</span>
+            </div>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                <button onclick="startGame('computer')">Play on Computer</button>
+                <button onclick="startGame('phone')">Play on Phone</button>
+            </div>
+        </div>
+        
+        <div id="game-over-screen" class="screen" style="display: none;">
+            <h1 style="color: #ff00ff; text-shadow: 0 0 20px #ff00ff;">Void Reached</h1>
+            <p id="final-score" style="font-size: 2rem; color: #fff; font-weight: bold;">Score: 0</p>
+            <button onclick="resetGame()">Play Again</button>
+        </div>
+        
+        <div id="hud">Distance: <span id="score-val">0</span>m</div>
+        
+        <div id="mobile-controls">
+            <div class="control-group">
+                <div class="btn-mobile" id="btn-left">◀</div>
+                <div class="btn-mobile" id="btn-right">▶</div>
+            </div>
+            <div class="control-group">
+                <div class="btn-mobile btn-jump" id="btn-jump">▲</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // --- Game Variables ---
+        let scene, camera, renderer;
+        let player, tunnelGroup;
+        let activeTiles = [];
+        
+        // Physics & Movement
+        const clock = new THREE.Clock();
+        const keys = { ArrowLeft: false, ArrowRight: false, Space: false };
+        let currentSpeed = 15;
+        const startSpeed = 15;
+        const jumpForce = 18;
+        const gravity = 45;
+        const moveSpeed = 14;
+        
+        let playerVelocityY = 0;
+        let isGrounded = false;
+        
+        // Track Generation
+        const tileSize = 2.4;  // Size of one grid block
+        const gridWidth = 7;   // 7 lanes wide
+        let furthestZ = 0;
+        
+        // State
+        let gameState = 'START'; // START, PLAYING, GAMEOVER
+        let score = 0;
+        
+        // Path logic to ensure the game is mathematically always beatable
+        let pathX = Math.floor(gridWidth / 2);
+
+        // Materials & Geometry
+        const tileGeo = new THREE.BoxGeometry(tileSize, 0.4, tileSize);
+        const tileMat = new THREE.MeshStandardMaterial({
+            color: 0x2a2a45, // Brighter blue-grey to contrast heavily with the void
+            emissive: 0x050515,
+            roughness: 0.7,
+            metalness: 0.3
+        });
+        const edgeGeo = new THREE.EdgesGeometry(tileGeo);
+        const edgeMat = new THREE.LineBasicMaterial({ color: 0x00e5ff, linewidth: 2 });
+        
+        // DOM Elements
+        const uiStart = document.getElementById('start-screen');
+        const uiGameOver = document.getElementById('game-over-screen');
+        const uiScoreContainer = document.getElementById('hud');
+        const scoreVal = document.getElementById('score-val');
+        const finalScore = document.getElementById('final-score');
+
+        // --- Initialization ---
+        function init() {
+            // Scene Setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000); // Pure black void
+            scene.fog = new THREE.FogExp2(0x000000, 0.012);
+
+            // Camera Setup
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200);
+
+            // Renderer Setup
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Optimize for high DPI
+            document.getElementById('game-container').appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            directionalLight.position.set(10, 20, 10);
+            scene.add(directionalLight);
+
+            // Tunnel Group (holds all tiles and rotates the world)
+            tunnelGroup = new THREE.Group();
+            scene.add(tunnelGroup);
+
+            // Player Setup
+            const playerGeo = new THREE.BoxGeometry(1, 1, 1);
+            const playerMat = new THREE.MeshStandardMaterial({ 
+                color: 0xff00ff, 
+                emissive: 0xaa00aa,
+                emissiveIntensity: 0.5,
+                roughness: 0.2
+            });
+            player = new THREE.Mesh(playerGeo, playerMat);
+            
+            // Add a point light attached to the player
+            const playerLight = new THREE.PointLight(0xff00ff, 1.5, 25);
+            playerLight.position.set(0, 1.5, 0);
+            player.add(playerLight);
+            
+            scene.add(player);
+
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize, false);
+            setupInput();
+
+            // Render loop
+            animate();
+        }
+
+        let isMobileMode = false;
+
+        function startGame(deviceType) {
+            isMobileMode = (deviceType === 'phone');
+            if (isMobileMode) {
+                document.getElementById('mobile-controls').style.display = 'flex';
+            } else {
+                document.getElementById('mobile-controls').style.display = 'none';
+            }
+            resetGame();
+        }
+
+        function resetGame() {
+            // Cleanup existing tiles
+            activeTiles.forEach(t => {
+                tunnelGroup.remove(t);
+                t.geometry.dispose();
+            });
+            activeTiles = [];
+            
+            // Reset Variables
+            player.position.set(0, 2, 0);
+            playerVelocityY = 0;
+            isGrounded = false;
+            
+            currentSpeed = startSpeed;
+            score = 0;
+            furthestZ = 0;
+            
+            pathX = Math.floor(gridWidth / 2);
+            
+            // Generate initial safe zone runway
+            for (let z = 5; z > -150; z -= tileSize) {
+                generateRow(z, z > -50); // Force solid path for first 50 units
+            }
+            
+            // Update UI
+            gameState = 'PLAYING';
+            uiStart.style.display = 'none';
+            uiGameOver.style.display = 'none';
+            uiScoreContainer.style.display = 'block';
+            clock.start();
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            uiGameOver.style.display = 'flex';
+            uiScoreContainer.style.display = 'none';
+            finalScore.innerText = `Distance: ${Math.floor(score)}m`;
+        }
+
+        // --- Level Generation ---
+        function createTile(xIndex, z) {
+            const mesh = new THREE.Mesh(tileGeo, tileMat);
+            
+            // Add neon edges
+            const edges = new THREE.LineSegments(edgeGeo, edgeMat);
+            mesh.add(edges);
+            
+            // Flag for raycaster collision detection
+            mesh.userData.isTile = true;
+            
+            // Calculate position relative to the center
+            const localX = (xIndex - gridWidth / 2 + 0.5) * tileSize;
+            mesh.position.set(localX, 0, z);
+            
+            tunnelGroup.add(mesh);
+            activeTiles.push(mesh);
+        }
+
+        function generateRow(z, forceSolid = false) {
+            // 1. Move the guaranteed path walker occasionally
+            if (!forceSolid && Math.random() < 0.4) {
+                pathX += (Math.random() < 0.5 ? -1 : 1);
+                
+                // Clamp within bounds
+                pathX = Math.max(0, Math.min(gridWidth - 1, pathX));
+            }
+            
+            // 2. Generate tiles for the floor
+            for (let x = 0; x < gridWidth; x++) {
+                let shouldCreateTile = true;
+                
+                if (!forceSolid) {
+                    if (x === pathX) {
+                        shouldCreateTile = true; // Always guarantee the path
+                    } else {
+                        // 35% chance for a gap, creating the obstacle layout
+                        shouldCreateTile = Math.random() > 0.35; 
+                    }
+                }
+                
+                if (shouldCreateTile) {
+                    createTile(x, z);
+                }
+            }
+            furthestZ = z;
+        }
+
+        // --- Main Game Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const delta = Math.min(clock.getDelta(), 0.1); // Cap delta to prevent huge jumps on lag
+
+            if (gameState === 'PLAYING') {
+                updateGame(delta);
+            }
+
+            // Smoothly move camera
+            if (gameState === 'PLAYING' || gameState === 'START') {
+                // Keep camera centered on X, high above Y, tracking Z
+                camera.position.x += (0 - camera.position.x) * 5 * delta; 
+                
+                const targetCamY = player.position.y + 7.5; // Steeper angle height
+                camera.position.y += (targetCamY - camera.position.y) * 5 * delta;
+                
+                camera.position.z = player.position.z + 10;
+                
+                // Look closer to the player for a steeper downward angle
+                camera.lookAt(player.position.x * 0.3, player.position.y - 2, player.position.z - 8);
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function updateGame(delta) {
+            // 1. Forward Movement & Score
+            player.position.z -= currentSpeed * delta;
+            score += currentSpeed * delta * 0.1;
+            scoreVal.innerText = Math.floor(score);
+            
+            // Gradually increase difficulty
+            currentSpeed += delta * 0.15; 
+
+            // 2. Continuous Track Generation
+            while (furthestZ > player.position.z - 120) {
+                generateRow(furthestZ - tileSize);
+            }
+
+            // Cleanup passed tiles
+            for (let i = activeTiles.length - 1; i >= 0; i--) {
+                const tile = activeTiles[i];
+                if (tile.position.z > player.position.z + 15) {
+                    tunnelGroup.remove(tile);
+                    // Dispose geometry to prevent memory leaks, materials are shared
+                    tile.geometry.dispose(); 
+                    activeTiles.splice(i, 1);
+                }
+            }
+
+            // 3. Lateral Movement (Strafe)
+            if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+                player.position.x -= moveSpeed * delta;
+                player.rotation.z = THREE.MathUtils.lerp(player.rotation.z, 0.2, 10 * delta); // Tilt visual
+            } else if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                player.position.x += moveSpeed * delta;
+                player.rotation.z = THREE.MathUtils.lerp(player.rotation.z, -0.2, 10 * delta);
+            } else {
+                player.rotation.z = THREE.MathUtils.lerp(player.rotation.z, 0, 10 * delta);
+            }
+
+            // 4. Gravity & Jumping
+            playerVelocityY -= gravity * delta;
+            player.position.y += playerVelocityY * delta;
+
+            // 5. Collision Detection 
+            const raycaster = new THREE.Raycaster(
+                player.position.clone(), 
+                new THREE.Vector3(0, -1, 0),
+                0,
+                5 // Max ray distance
+            );
+            
+            const meshesOnly = tunnelGroup.children.filter(child => child.userData.isTile);
+            const intersects = raycaster.intersectObjects(meshesOnly, false);
+            
+            isGrounded = false;
+            if (intersects.length > 0) {
+                const hit = intersects[0];
+                if (hit.distance < 0.6 && playerVelocityY <= 0) {
+                    player.position.y = hit.point.y + 0.5; // Snap perfectly to the surface
+                    playerVelocityY = 0;
+                    isGrounded = true;
+                }
+            }
+
+            // Apply Jump
+            if (isGrounded && (keys['Space'] || keys['ArrowUp'] || keys['w'] || keys['W'])) {
+                playerVelocityY = jumpForce;
+                isGrounded = false;
+                keys['Space'] = false; // Require releasing key to jump again (or tap)
+            }
+
+            // 6. Death Condition (Falling into the void)
+            if (player.position.y < -15) {
+                gameOver();
+            }
+        }
+
+        // --- Input Handling ---
+        function setupInput() {
+            // Keyboard
+            window.addEventListener('keydown', (e) => {
+                if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+                    e.preventDefault(); // Prevent page scrolling
+                }
+                keys[e.code] = true;
+                keys[e.key] = true;
+            }, {passive: false});
+
+            window.addEventListener('keyup', (e) => {
+                keys[e.code] = false;
+                keys[e.key] = false;
+            });
+
+            // Specific touch buttons for mobile controls
+            const btnLeft = document.getElementById('btn-left');
+            const btnRight = document.getElementById('btn-right');
+            const btnJump = document.getElementById('btn-jump');
+
+            const bindBtn = (element, key) => {
+                const press = (e) => { e.preventDefault(); keys[key] = true; };
+                const release = (e) => { e.preventDefault(); keys[key] = false; };
+                
+                element.addEventListener('touchstart', press, {passive: false});
+                element.addEventListener('touchend', release, {passive: false});
+                // Also bind mouse events so they work on desktop tests
+                element.addEventListener('mousedown', press);
+                element.addEventListener('mouseup', release);
+                element.addEventListener('mouseleave', release);
+            };
+
+            bindBtn(btnLeft, 'ArrowLeft');
+            bindBtn(btnRight, 'ArrowRight');
+            bindBtn(btnJump, 'Space');
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Boot
+        window.onload = init;
+    </script>
 </body>
 </html>
